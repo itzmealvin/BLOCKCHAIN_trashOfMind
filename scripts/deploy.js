@@ -22,7 +22,7 @@ async function main() {
 
   console.log("Account balance:", (await deployer.getBalance()).toString());
 
-  const Token = await ethers.getContractFactory("Trash");
+  const Token = await ethers.getContractFactory("TrashOfMind");
   const token = await Token.deploy();
   await token.deployed();
 
@@ -51,10 +51,10 @@ function saveFrontendFiles(token) {
     JSON.stringify({ Token: token.address }, undefined, 2)
   );
 
-  const TokenArtifact = artifacts.readArtifactSync("Trash");
+  const TokenArtifact = artifacts.readArtifactSync("TrashOfMind");
 
   fs.writeFileSync(
-    path.join(contractsDir, "Trash.json"),
+    path.join(contractsDir, "TrashOfMind.json"),
     JSON.stringify(TokenArtifact, null, 2)
   );
 }
