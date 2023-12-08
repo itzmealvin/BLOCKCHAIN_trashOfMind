@@ -4,7 +4,7 @@ pragma solidity ^0.8.9;
 
 contract TrashOfMind {
     // declare the owner of this contract
-    address public owner;
+    address payable public owner;
 
     // self-define data structure to store the Thought
     struct Thought {
@@ -16,9 +16,9 @@ contract TrashOfMind {
     // storage to store all thrown thoughts
     Thought[] private allThoughts;
 
-    // mapping to check if thoughts are initialized, last thrown and own thoughts of an address
+    // mapping to check if thoughts are initialized, last action and own thoughts of an address
     mapping(uint256 => bool) private isInitialized;
-    mapping(address => uint256) private lastThrown;
+    mapping(address => uint256) private lastAction;
     mapping(address => uint256[]) public ownThoughts;
 
     // create this event for our React.app to use
@@ -26,7 +26,7 @@ contract TrashOfMind {
 
     // set deployer address as the owner
     constructor() {
-        owner = msg.sender;
+        owner = payable(msg.sender);
     }
 
     // check if only the address of the owner
@@ -38,7 +38,7 @@ contract TrashOfMind {
     // make a break to prevent spamming each 1 minutes
     modifier isInBreak() {
         require(
-            lastThrown[msg.sender] + 1 minutes < block.timestamp,
+            lastAction[msg.sender] + 1 minutes < block.timestamp,
             "Please wait up to 1 minute before throwing again"
         );
         _;
@@ -61,7 +61,7 @@ contract TrashOfMind {
         isInitialized[allThoughts.length] = true;
         ownThoughts[msg.sender].push(allThoughts.length);
         allThoughts.push(tempMind);
-        lastThrown[msg.sender] = block.timestamp;
+        lastAction[msg.sender] = block.timestamp;
         emit throwMind(allThoughts.length);
     }
 
@@ -72,9 +72,17 @@ contract TrashOfMind {
             deleteThought.sender == msg.sender,
             "You are not the owner of this thought!"
         );
+
         allThoughts[_nonce] = allThoughts[allThoughts.length - 1];
+        ownThoughts[msg.sender][_nonce] = ownThoughts[msg.sender][
+            ownThoughts[msg.sender].length - 1
+        ];
+
         allThoughts[allThoughts.length - 1] = deleteThought;
+        ownThoughts[msg.sender][ownThoughts[msg.sender].length - 1] = _nonce;
+
         allThoughts.pop();
+        ownThoughts[msg.sender].pop();
     }
 
     // return all thoughts from the blockchain as an array
@@ -96,6 +104,10 @@ contract TrashOfMind {
 
     // transfer the ownership to null address
     function renounceOwnership() public onlyOwner {
-        owner = address(0);
+        owner = payable(address(0));
+    }
+
+    function close() public onlyOwner {
+        selfdestruct(owner);
     }
 }
