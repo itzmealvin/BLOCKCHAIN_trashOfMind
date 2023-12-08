@@ -48,7 +48,7 @@ function saveFrontendFiles(token) {
 
   fs.writeFileSync(
     path.join(contractsDir, "contract-address.json"),
-    JSON.stringify({ Token: token.address }, undefined, 2)
+    JSON.stringify({ address: token.address }, undefined, 2)
   );
 
   const TokenArtifact = artifacts.readArtifactSync("TrashOfMind");
