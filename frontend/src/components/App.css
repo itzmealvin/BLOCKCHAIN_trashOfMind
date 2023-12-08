@@ -30,5 +30,10 @@
   padding: 8px;
   border: 0;
   border-radius: 5px;
-  
+}
+
+.textbox {
+  margin-top: 16px;
+  padding: 8px;
+  border-radius: 5px;
 }

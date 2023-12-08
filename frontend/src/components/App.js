@@ -1,33 +1,59 @@
 import React, { useEffect, useState } from "react";
 import { ethers } from "ethers";
-
 import "./App.css";
 import deployedAddress from "../contracts/contract-address.json";
 import contractJSON from "../contracts/TrashOfMind.json";
 
-export default function App() {
+const App = () => {
   const [currentAccount, setCurrentAccount] = useState("");
   const [myMind, setMyMind] = useState({ mind: "" });
-  const [allThoughts, setAllThoughts] = useState([]);
+  const [myNonce, setMyNonce] = useState({ nonce: "" });
+  const [myThoughts, setMyThoughts] = useState([]);
+  const [recentThoughts, setRecentThoughts] = useState([]);
+  const [numThoughts, setNumThoughts] = useState();
+  const [allNonces, setAllNonces] = useState([]);
+
+  const targetNetworkId = "0x13881";
   const contractAddress = deployedAddress.address;
   const contractABI = contractJSON.abi;
+
+  const checkNetwork = async () => {
+    const { ethereum } = window;
+    if (!ethereum) return false;
+
+    const currentChainId = await ethereum.request({ method: "eth_chainId" });
+    return currentChainId === targetNetworkId;
+  };
+
+  const switchNetwork = async () => {
+    await window.ethereum.request({
+      method: "wallet_switchEthereumChain",
+      params: [{ chainId: targetNetworkId }],
+    });
+    window.location.reload();
+  };
 
   const checkIfWalletIsConnected = async () => {
     try {
       const { ethereum } = window;
       if (!ethereum) {
         alert("Metamask is not installed!");
+        return;
       }
+
+      if (!checkNetwork()) {
+        alert("Please switch to the right network");
+        switchNetwork();
+        return;
+      }
+
       const accounts = await ethereum.request({ method: "eth_accounts" });
       if (accounts.length !== 0) {
-        const account = accounts[0];
-        setCurrentAccount(account);
-      } else {
-        alert("No authorized accounts found!");
+        setCurrentAccount(accounts[0]);
+        getStatistics();
       }
-      getAllThoughts();
     } catch (error) {
-      console.log(error);
+      console.error(error);
     }
   };
 
@@ -42,16 +68,18 @@ export default function App() {
         alert("Get Metamask at https://metamask.io/!");
         return;
       }
+
       const accounts = await ethereum.request({
         method: "eth_requestAccounts",
       });
+
       setCurrentAccount(accounts[0]);
     } catch (error) {
-      console.log(error);
+      console.error(error);
     }
   };
 
-  const newThought = async () => {
+  const interactWithContract = async (action, callback) => {
     try {
       const { ethereum } = window;
       if (ethereum) {
@@ -62,23 +90,37 @@ export default function App() {
           contractABI,
           signer
         );
-        console.log(typeof myMind.mind);
-        const newThrownTxn = await trashOfMindContract.throwNewMind(
-          myMind.mind
-        );
-        alert("Throwing mind...", newThrownTxn.hash);
-        await newThrownTxn.wait();
-        alert(
-          "Throwned! Now forget about it, or censored it later with nonce:",
-          newThrownTxn
-        );
+
+        const txn = await action(trashOfMindContract);
+        await txn.wait();
+        callback();
       }
     } catch (error) {
-      console.log(error);
+      console.error(error);
     }
   };
 
-  const getAllThoughts = async () => {
+  const newThought = () => {
+    interactWithContract(
+      async (contract) => contract.throwNewMind(myMind.mind),
+      () => {
+        alert("Throwned! Now forget about it, or censor it later with nonce:");
+        getStatistics();
+      }
+    );
+  };
+
+  const deleteThought = () => {
+    interactWithContract(
+      async (contract) => contract.deleteOldMind(parseInt(myNonce.nonce, 10)),
+      () => {
+        alert("Deleted! Now forget about it!");
+        getStatistics();
+      }
+    );
+  };
+
+  const viewThought = async () => {
     try {
       const { ethereum } = window;
       if (ethereum) {
@@ -90,23 +132,54 @@ export default function App() {
           signer
         );
 
-        const thoughts = await trashOfMindContract.viewAllThoughts();
+        const minds = await Promise.all([
+          trashOfMindContract.viewSpecificMind(myNonce.nonce),
+        ]);
 
-        let thoughtsCleaned = [];
-        thoughts.forEach((thought) => {
-          thoughtsCleaned.push({
-            address: thought.sender,
-            mind: thought.mind,
-            timestamp: new Date(thought.timestamp * 1000),
-          });
-        });
-        setAllThoughts(thoughtsCleaned);
-        console.log(thoughtsCleaned);
+        const mindsCleaned = minds.map((mind) => ({
+          mind: mind.mind,
+          timestamp: new Date(mind.timestamp * 1000),
+        }));
+        setMyThoughts(mindsCleaned);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const getStatistics = async () => {
+    try {
+      const { ethereum } = window;
+      if (ethereum) {
+        const provider = new ethers.providers.Web3Provider(ethereum);
+        const signer = provider.getSigner();
+        const trashOfMindContract = new ethers.Contract(
+          contractAddress,
+          contractABI,
+          signer
+        );
+
+        const [allThoughts, nonces] = await Promise.all([
+          trashOfMindContract.viewAllThoughts(),
+          trashOfMindContract.viewAllNoncesOfAddress(),
+        ]);
+
+        const thoughtsCleaned = allThoughts.map((thought) => ({
+          address: thought.sender,
+          mind: thought.mind,
+          timestamp: new Date(thought.timestamp * 1000),
+        }));
+
+        const noncesArray = nonces.map((bigNumber) => bigNumber.toNumber());
+
+        setNumThoughts(thoughtsCleaned.length);
+        setRecentThoughts(thoughtsCleaned.slice(-5));
+        setAllNonces(noncesArray);
       } else {
-        console.log("Ethereum object doesn't exist!");
+        console.error("Ethereum object doesn't exist!");
       }
     } catch (error) {
-      console.log(error);
+      console.error(error);
     }
   };
 
@@ -115,39 +188,71 @@ export default function App() {
       <div className="dataContainer">
         <div className="header">Trash of Mind!</div>
         <div className="bio">
-          A place for myself, everyone to throw out the negative minds
+          A place for myself, everyone to throw out the negative minds. We have{" "}
+          {numThoughts} thoughts to-date.
         </div>
+        <textarea
+          onChange={(e) => setMyMind({ ...myMind, mind: e.target.value })}
+          value={myMind.mind}
+          name="mind"
+          className="textbox"
+          placeholder="Write something negative here..."
+        ></textarea>
         {!currentAccount && (
           <button className="waveButton" onClick={connectWallet}>
             Connect Wallet
           </button>
         )}
-        <textarea
-          onChange={(e) => setMyMind({ ...myMind, mind: e.target.value })}
-          value={myMind.mind}
-          name="mind"
-          id="mind"
-        ></textarea>
         <button className="waveButton" onClick={newThought}>
           Throw it out...
         </button>
-        {allThoughts.map((thought, index) => {
-          return (
-            <div
-              key={index}
-              style={{
-                backgroundColor: "OldLace",
-                marginTop: "16px",
-                padding: "8px",
-              }}
-            >
-              <div>Address: {thought.address}</div>
-              <div>Mind: {thought.mind}</div>
-              <div>At: {thought.timestamp.toString()}</div>
-            </div>
-          );
-        })}
+        {recentThoughts.map((thought, index) => (
+          <div
+            key={index}
+            style={{
+              backgroundColor: "OldLace",
+              marginTop: "16px",
+              padding: "8px",
+            }}
+          >
+            <div>Address: {thought.address}</div>
+            <div>Mind: {thought.mind}</div>
+            <div>At: {thought.timestamp.toString()}</div>
+          </div>
+        ))}
+        <div className="bio">
+          You have {allNonces.length} thoughts to-date, that are:{" "}
+          {allNonces.join(", ")}
+        </div>
+        <input
+          onChange={(e) => setMyNonce({ ...myNonce, nonce: e.target.value })}
+          value={myNonce.nonce}
+          name="nonce"
+          className="textbox"
+          placeholder="Write your nonce here"
+        ></input>
+        <button className="waveButton" onClick={viewThought}>
+          View this thought..
+        </button>
+        {myThoughts.map((mind, index) => (
+          <div
+            key={index}
+            style={{
+              backgroundColor: "OldLace",
+              marginTop: "16px",
+              padding: "8px",
+            }}
+          >
+            <div>Mind: {mind.mind}</div>
+            <div>At: {mind.timestamp.toString()}</div>
+          </div>
+        ))}
+        <button className="waveButton" onClick={deleteThought}>
+          Delete your thought..
+        </button>
       </div>
     </div>
   );
-}
+};
+
+export default App;
