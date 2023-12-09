@@ -226,7 +226,11 @@ const App = () => {
             <div>At: {thought.timestamp.toString()}</div>
           </div>
         ))}
-        <div className="bio">You have {allNonces.length} thoughts to-date</div>
+        <div className="bio">
+          {!currentAccount
+            ? ""
+            : `You have ${allNonces.length} thoughts to-date`}
+        </div>
         <select
           onChange={(e) => setMyNonce({ ...myNonce, nonce: e.target.value })}
           value={myNonce.nonce}
