@@ -188,8 +188,19 @@ const App = () => {
       <div className="dataContainer">
         <div className="header">Trash of Mind!</div>
         <div className="bio">
-          A place for myself, everyone to throw out the negative minds. We have{" "}
-          {numThoughts} thoughts to-date.
+          A place for myself, everyone to throw out the negative minds
+        </div>
+        <div className="bio">
+          {!currentAccount ? (
+            <>
+              <p>Connect a Web3 wallet to see all the stats.</p>
+              <button className="waveButton" onClick={connectWallet}>
+                Connect Wallet
+              </button>
+            </>
+          ) : (
+            <p>We have {numThoughts} thoughts to-date.</p>
+          )}
         </div>
         <textarea
           onChange={(e) => setMyMind({ ...myMind, mind: e.target.value })}
@@ -198,11 +209,6 @@ const App = () => {
           className="textbox"
           placeholder="Write something negative here..."
         ></textarea>
-        {!currentAccount && (
-          <button className="waveButton" onClick={connectWallet}>
-            Connect Wallet
-          </button>
-        )}
         <button className="waveButton" onClick={newThought}>
           Throw it out...
         </button>
@@ -220,17 +226,22 @@ const App = () => {
             <div>At: {thought.timestamp.toString()}</div>
           </div>
         ))}
-        <div className="bio">
-          You have {allNonces.length} thoughts to-date, that are:{" "}
-          {allNonces.join(", ")}
-        </div>
-        <input
+        <div className="bio">You have {allNonces.length} thoughts to-date</div>
+        <select
           onChange={(e) => setMyNonce({ ...myNonce, nonce: e.target.value })}
           value={myNonce.nonce}
           name="nonce"
           className="textbox"
-          placeholder="Write your nonce here"
-        ></input>
+        >
+          <option value="" disabled>
+            Select a nonce
+          </option>
+          {allNonces.map((nonce, index) => (
+            <option key={index} value={nonce}>
+              {nonce}
+            </option>
+          ))}
+        </select>
         <button className="waveButton" onClick={viewThought}>
           View this thought..
         </button>
