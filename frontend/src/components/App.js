@@ -18,18 +18,38 @@ const App = () => {
   const contractABI = contractJSON.abi;
 
   const checkNetwork = async () => {
-    const { ethereum } = window;
-    if (!ethereum) return false;
-
-    const currentChainId = await ethereum.request({ method: "eth_chainId" });
+    const currentChainId = await window.ethereum.request({
+      method: "eth_chainId",
+    });
     return currentChainId === targetNetworkId;
   };
 
   const switchNetwork = async () => {
-    await window.ethereum.request({
-      method: "wallet_switchEthereumChain",
-      params: [{ chainId: targetNetworkId }],
-    });
+    try {
+      await window.ethereum.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: targetNetworkId }],
+      });
+    } catch (error) {
+      if (error.code === 4902) {
+        await window.ethereum.request({
+          method: "wallet_addEthereumChain",
+          params: [
+            {
+              chainId: targetNetworkId,
+              rpcUrls: ["https://rpc-mumbai.maticvigil.com"],
+              chainName: "Polygon Mumbai",
+              nativeCurrency: {
+                name: "MATIC",
+                symbol: "MATIC",
+                decimals: 18,
+              },
+              blockExplorerUrls: ["https://mumbai.polygonscan.com/"],
+            },
+          ],
+        });
+      }
+    }
     window.location.reload();
   };
 
@@ -38,12 +58,6 @@ const App = () => {
       const { ethereum } = window;
       if (!ethereum) {
         alert("Metamask is not installed!");
-        return;
-      }
-
-      if (!checkNetwork()) {
-        alert("Please switch to the right network");
-        switchNetwork();
         return;
       }
 
@@ -59,6 +73,9 @@ const App = () => {
 
   useEffect(() => {
     checkIfWalletIsConnected();
+    window.ethereum.on("accountsChanged", function (accounts) {
+      window.location.reload();
+    });
   }, []);
 
   const connectWallet = async () => {
@@ -73,13 +90,19 @@ const App = () => {
         method: "eth_requestAccounts",
       });
 
+      if (!(await checkNetwork())) {
+        alert("Please switch to the right network");
+        switchNetwork();
+        return;
+      }
+
       setCurrentAccount(accounts[0]);
     } catch (error) {
       console.error(error);
     }
   };
 
-  const interactWithContract = async (action, callback) => {
+  const getContract = () => {
     try {
       const { ethereum } = window;
       if (ethereum) {
@@ -90,58 +113,40 @@ const App = () => {
           contractABI,
           signer
         );
-
-        const txn = await action(trashOfMindContract);
-        await txn.wait();
-        callback();
+        return trashOfMindContract;
       }
     } catch (error) {
       console.error(error);
     }
   };
 
-  const newThought = () => {
-    interactWithContract(
-      async (contract) => contract.throwNewMind(myMind.mind),
-      () => {
-        alert("Throwned! Now forget about it, or censor it later with nonce:");
-        getStatistics();
-      }
-    );
+  const newThought = async () => {
+    const txn = await getContract().throwNewMind(myMind.mind);
+    await txn.wait();
+    alert("Thrown! Now forget about it");
+    getStatistics();
   };
 
-  const deleteThought = () => {
-    interactWithContract(
-      async (contract) => contract.deleteOldMind(parseInt(myNonce.nonce, 10)),
-      () => {
-        alert("Deleted! Now forget about it!");
-        getStatistics();
-      }
-    );
+  const deleteThought = async () => {
+    const txn = await getContract().deleteOldMind(parseInt(myNonce.nonce, 10), {
+      gasLimit: 100000,
+    });
+    await txn.wait();
+    alert("Deleted! Now really forget about it");
+    getStatistics();
   };
 
   const viewThought = async () => {
     try {
-      const { ethereum } = window;
-      if (ethereum) {
-        const provider = new ethers.providers.Web3Provider(ethereum);
-        const signer = provider.getSigner();
-        const trashOfMindContract = new ethers.Contract(
-          contractAddress,
-          contractABI,
-          signer
-        );
+      const minds = await Promise.all([
+        getContract().viewSpecificMind(parseInt(myNonce.nonce, 10)),
+      ]);
 
-        const minds = await Promise.all([
-          trashOfMindContract.viewSpecificMind(myNonce.nonce),
-        ]);
-
-        const mindsCleaned = minds.map((mind) => ({
-          mind: mind.mind,
-          timestamp: new Date(mind.timestamp * 1000),
-        }));
-        setMyThoughts(mindsCleaned);
-      }
+      const mindsCleaned = minds.map((mind) => ({
+        mind: mind.mind,
+        timestamp: new Date(mind.timestamp * 1000),
+      }));
+      setMyThoughts(mindsCleaned);
     } catch (error) {
       console.error(error);
     }
@@ -149,35 +154,21 @@ const App = () => {
 
   const getStatistics = async () => {
     try {
-      const { ethereum } = window;
-      if (ethereum) {
-        const provider = new ethers.providers.Web3Provider(ethereum);
-        const signer = provider.getSigner();
-        const trashOfMindContract = new ethers.Contract(
-          contractAddress,
-          contractABI,
-          signer
-        );
+      const [allThoughts, nonces] = await Promise.all([
+        getContract().viewAllThoughts(),
+        getContract().viewAllNoncesOfAddress(),
+      ]);
 
-        const [allThoughts, nonces] = await Promise.all([
-          trashOfMindContract.viewAllThoughts(),
-          trashOfMindContract.viewAllNoncesOfAddress(),
-        ]);
+      const thoughtsCleaned = allThoughts.map((thought) => ({
+        mind: thought.mind,
+        timestamp: new Date(thought.timestamp * 1000),
+      }));
 
-        const thoughtsCleaned = allThoughts.map((thought) => ({
-          address: thought.sender,
-          mind: thought.mind,
-          timestamp: new Date(thought.timestamp * 1000),
-        }));
+      const noncesArray = nonces.map((bigNumber) => bigNumber.toNumber());
 
-        const noncesArray = nonces.map((bigNumber) => bigNumber.toNumber());
-
-        setNumThoughts(thoughtsCleaned.length);
-        setRecentThoughts(thoughtsCleaned.slice(-5));
-        setAllNonces(noncesArray);
-      } else {
-        console.error("Ethereum object doesn't exist!");
-      }
+      setNumThoughts(thoughtsCleaned.length);
+      setRecentThoughts(thoughtsCleaned.slice(-5));
+      setAllNonces(noncesArray);
     } catch (error) {
       console.error(error);
     }
@@ -221,7 +212,6 @@ const App = () => {
               padding: "8px",
             }}
           >
-            <div>Address: {thought.address}</div>
             <div>Mind: {thought.mind}</div>
             <div>At: {thought.timestamp.toString()}</div>
           </div>
