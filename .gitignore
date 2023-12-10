@@ -6,3 +6,4 @@ node_modules
 cache
 artifacts
 .DS_Store
+frontend/src/components/oldApp.js

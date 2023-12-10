@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { ethers } from "ethers";
+import truncateEthAddress from "truncate-eth-address";
 import "./App.css";
 import deployedAddress from "../contracts/contract-address.json";
 import contractJSON from "../contracts/TrashOfMind.json";
@@ -190,7 +191,10 @@ const App = () => {
               </button>
             </>
           ) : (
-            <p>We have {numThoughts} thoughts to-date.</p>
+            <p>
+              Hello {truncateEthAddress(currentAccount)}! We have {numThoughts}{" "}
+              thoughts to-date.
+            </p>
           )}
         </div>
         <textarea
