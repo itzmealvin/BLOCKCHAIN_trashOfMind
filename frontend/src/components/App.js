@@ -168,7 +168,7 @@ const App = () => {
       const noncesArray = nonces.map((bigNumber) => bigNumber.toNumber());
 
       setNumThoughts(thoughtsCleaned.length);
-      setRecentThoughts(thoughtsCleaned.slice(-5));
+      setRecentThoughts(thoughtsCleaned.slice(-5).reverse());
       setAllNonces(noncesArray);
     } catch (error) {
       console.error(error);
@@ -259,6 +259,16 @@ const App = () => {
         <button className="waveButton" onClick={deleteThought}>
           Delete your thought..
         </button>
+        <div className="bio">
+          Support my work: 0x24B00B5987Ae6A5b7a8c73671332b938433fA7D9.
+        </div>
+        <a
+          href="https://blog-betterday.vercel.app/"
+          target="_blank"
+          className="bio"
+        >
+          Want some healing?
+        </a>
       </div>
     </div>
   );
