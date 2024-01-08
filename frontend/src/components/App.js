@@ -1,5 +1,5 @@
-import React, {useEffect, useState} from "react";
-import {ethers} from "ethers";
+import React, { useEffect, useState } from "react";
+import { ethers } from "ethers";
 import truncateEthAddress from "truncate-eth-address";
 import "./App.css";
 import deployedAddress from "../contracts/contract-address.json";
@@ -51,7 +51,6 @@ const App = () => {
         });
       }
     }
-    window.location.reload();
   };
 
   const checkIfWalletIsConnected = async () => {
@@ -73,10 +72,24 @@ const App = () => {
   };
 
   useEffect(() => {
-    checkIfWalletIsConnected().then(() => {});
-    window.ethereum.on("accountsChanged", function () {
-      window.location.reload();
-    });
+    const fetchData = async () => {
+      try {
+        checkIfWalletIsConnected();
+
+        window.ethereum.on("accountsChanged", function () {
+          window.location.reload();
+        });
+
+        window.ethereum.on("networkChanged", function () {
+          switchNetwork();
+          window.location.reload();
+        });
+      } catch (error) {
+        console.error("Error in useEffect:", error);
+      }
+    };
+
+    fetchData();
   }, []);
 
   const connectWallet = async () => {
@@ -94,10 +107,10 @@ const App = () => {
       if (!(await checkNetwork())) {
         alert("Please switch to the right network");
         await switchNetwork();
-        return;
       }
 
       setCurrentAccount(accounts[0]);
+      window.location.reload();
     } catch (error) {
       console.error(error);
     }
@@ -109,11 +122,7 @@ const App = () => {
       if (ethereum) {
         const provider = new ethers.providers.Web3Provider(ethereum);
         const signer = provider.getSigner();
-        return new ethers.Contract(
-            contractAddress,
-            contractABI,
-            signer
-        );
+        return new ethers.Contract(contractAddress, contractABI, signer);
       }
     } catch (error) {
       console.error(error);
@@ -264,6 +273,7 @@ const App = () => {
         <a
           href="https://blog-betterday.vercel.app/"
           target="_blank"
+          rel="noreferrer"
           className="bio"
         >
           Want some healing?
