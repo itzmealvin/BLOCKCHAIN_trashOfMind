@@ -44,7 +44,7 @@ contract TrashOfMind {
         _;
     }
 
-    // check if only the nonce points to an exisiting thought
+    // check if only the nonce points to an existing thought
     modifier thoughtExist(uint256 _nonce) {
         require(isInitialized[_nonce] == true, "Thought not existed!");
         _;
@@ -91,7 +91,7 @@ contract TrashOfMind {
         return allThoughts[_nonce];
     }
 
-    // return the nonces of thought from a specific address
+    // return the nonce of thought from a specific address
     function viewAllNoncesOfAddress() public view returns (uint256[] memory) {
         uint256[] memory result = new uint256[](totalOwn[msg.sender]);
         uint counter = 0;

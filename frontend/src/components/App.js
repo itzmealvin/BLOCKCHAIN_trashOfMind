@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { ethers } from "ethers";
+import React, {useEffect, useState} from "react";
+import {ethers} from "ethers";
 import truncateEthAddress from "truncate-eth-address";
 import "./App.css";
 import deployedAddress from "../contracts/contract-address.json";
@@ -65,7 +65,7 @@ const App = () => {
       const accounts = await ethereum.request({ method: "eth_accounts" });
       if (accounts.length !== 0) {
         setCurrentAccount(accounts[0]);
-        getStatistics();
+        await getStatistics();
       }
     } catch (error) {
       console.error(error);
@@ -73,8 +73,8 @@ const App = () => {
   };
 
   useEffect(() => {
-    checkIfWalletIsConnected();
-    window.ethereum.on("accountsChanged", function (accounts) {
+    checkIfWalletIsConnected().then(() => {});
+    window.ethereum.on("accountsChanged", function () {
       window.location.reload();
     });
   }, []);
@@ -93,7 +93,7 @@ const App = () => {
 
       if (!(await checkNetwork())) {
         alert("Please switch to the right network");
-        switchNetwork();
+        await switchNetwork();
         return;
       }
 
@@ -109,12 +109,11 @@ const App = () => {
       if (ethereum) {
         const provider = new ethers.providers.Web3Provider(ethereum);
         const signer = provider.getSigner();
-        const trashOfMindContract = new ethers.Contract(
-          contractAddress,
-          contractABI,
-          signer
+        return new ethers.Contract(
+            contractAddress,
+            contractABI,
+            signer
         );
-        return trashOfMindContract;
       }
     } catch (error) {
       console.error(error);
@@ -125,7 +124,7 @@ const App = () => {
     const txn = await getContract().throwNewMind(myMind.mind);
     await txn.wait();
     alert("Thrown! Now forget about it");
-    getStatistics();
+    await getStatistics();
   };
 
   const deleteThought = async () => {
@@ -134,7 +133,7 @@ const App = () => {
     });
     await txn.wait();
     alert("Deleted! Now really forget about it");
-    getStatistics();
+    await getStatistics();
   };
 
   const viewThought = async () => {

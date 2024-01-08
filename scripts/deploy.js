@@ -2,6 +2,8 @@
 // yours, or create new ones.
 
 const path = require("path");
+const {network, artifacts} = require("hardhat");
+const {ethers} = require("ethers");
 
 async function main() {
   // This is just a convenience check
@@ -13,7 +15,7 @@ async function main() {
     );
   }
 
-  // ethers is available in the global scope
+  // ethers are available in the global scope
   const [deployer] = await ethers.getSigners();
   console.log(
     "Deploying the contracts with the account:",
