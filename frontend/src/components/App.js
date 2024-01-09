@@ -53,6 +53,15 @@ const App = () => {
     }
   };
 
+  const handleNetworkCheck = async () => {
+    if (!(await checkNetwork())) {
+      alert("Please switch to the right network");
+      await switchNetwork();
+      return false;
+    }
+    return true;
+  };
+
   const checkIfWalletIsConnected = async () => {
     try {
       const { ethereum } = window;
@@ -79,11 +88,6 @@ const App = () => {
         window.ethereum.on("accountsChanged", function () {
           window.location.reload();
         });
-
-        window.ethereum.on("networkChanged", function () {
-          switchNetwork();
-          window.location.reload();
-        });
       } catch (error) {
         console.error("Error in useEffect:", error);
       }
@@ -99,15 +103,10 @@ const App = () => {
         alert("Get Metamask at https://metamask.io/!");
         return;
       }
-
+      await handleNetworkCheck();
       const accounts = await ethereum.request({
         method: "eth_requestAccounts",
       });
-
-      if (!(await checkNetwork())) {
-        alert("Please switch to the right network");
-        await switchNetwork();
-      }
 
       setCurrentAccount(accounts[0]);
       window.location.reload();
@@ -130,6 +129,7 @@ const App = () => {
   };
 
   const newThought = async () => {
+    await handleNetworkCheck();
     const txn = await getContract().throwNewMind(myMind.mind);
     await txn.wait();
     alert("Thrown! Now forget about it");
@@ -137,6 +137,7 @@ const App = () => {
   };
 
   const deleteThought = async () => {
+    await handleNetworkCheck();
     const txn = await getContract().deleteOldMind(parseInt(myNonce.nonce, 10), {
       gasLimit: 100000,
     });
@@ -162,6 +163,7 @@ const App = () => {
   };
 
   const getStatistics = async () => {
+    await handleNetworkCheck();
     try {
       const [allThoughts, nonces] = await Promise.all([
         getContract().viewAllThoughts(),
