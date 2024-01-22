@@ -20,7 +20,7 @@ contract TrashOfMind {
     mapping(address => uint256) private lastAction;
 
     // create this event for our React.app to use
-    event throwMind(uint256 _nonce);
+    event throwMind(uint256 _currentIndex);
     event deleteMind();
 
     // set deployer address as the owner
