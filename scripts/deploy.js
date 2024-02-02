@@ -2,8 +2,6 @@
 // yours, or create new ones.
 
 const path = require("path");
-const {network, artifacts} = require("hardhat");
-const {ethers} = require("ethers");
 
 async function main() {
   // This is just a convenience check

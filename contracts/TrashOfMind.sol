@@ -16,7 +16,7 @@ contract TrashOfMind {
     // mapping to check if thoughts are initialized, last action, number of thought of an address and the owner of a thought
     mapping(uint256 => bool) private isInitialized;
     mapping(address => uint256) private totalOwnMinds;
-    mapping(uint256 => address) private mindOwner;
+    mapping(uint256 => address) private mindOwnerOf;
     mapping(address => uint256) private lastAction;
 
     // create this event for our React.app to use
@@ -26,6 +26,7 @@ contract TrashOfMind {
     // set deployer address as the owner
     constructor() {
         owner = payable(msg.sender);
+        throwNewMind("THIS IS THE GENESIS MESSAGE!");
     }
 
     // check if only the address of the owner
@@ -50,11 +51,11 @@ contract TrashOfMind {
     }
 
     // throw new status to the blockchain
-    function throwNewMind(string memory _message) external isInBreak {
+    function throwNewMind(string memory _message) public isInBreak {
         Mind memory tempStatus = Mind(block.timestamp, _message);
         isInitialized[allMinds.length] = true;
         totalOwnMinds[msg.sender] += 1;
-        mindOwner[allMinds.length] = msg.sender;
+        mindOwnerOf[allMinds.length] = msg.sender;
         allMinds.push(tempStatus);
         lastAction[msg.sender] = block.timestamp;
         emit throwMind(allMinds.length);
@@ -64,7 +65,7 @@ contract TrashOfMind {
     function deleteCurrentMind(uint256 _nonce) external checkMind(_nonce) {
         uint256 lastIndex = allMinds.length - 1;
         require(
-            mindOwner[_nonce] == msg.sender,
+            mindOwnerOf[_nonce] == msg.sender,
             "You are not the owner of this mind!"
         );
         require(
@@ -72,7 +73,7 @@ contract TrashOfMind {
             "Please wait for at least 2 minds available!"
         );
         totalOwnMinds[msg.sender]--;
-        mindOwner[_nonce] = mindOwner[lastIndex];
+        mindOwnerOf[_nonce] = mindOwnerOf[lastIndex];
         allMinds[_nonce] = allMinds[lastIndex];
         allMinds.pop();
         emit deleteMind();
@@ -81,18 +82,18 @@ contract TrashOfMind {
     // view specific mind if input a nonce
     function viewMind(
         uint256 _nonce
-    ) public view checkMind(_nonce) returns (Mind memory) {
+    ) external view checkMind(_nonce) returns (Mind memory) {
         return allMinds[_nonce];
     }
 
     // return the nonce of thought from a specific address
     function viewAllNoncesOf(
         address _address
-    ) public view returns (uint256[] memory) {
+    ) external view returns (uint256[] memory) {
         uint256[] memory result = new uint256[](totalOwnMinds[_address]);
         uint counter = 0;
         for (uint i = 0; i < allMinds.length; i++) {
-            if (mindOwner[i] == _address) {
+            if (mindOwnerOf[i] == _address) {
                 result[counter] = i;
                 counter++;
             }
@@ -101,12 +102,12 @@ contract TrashOfMind {
     }
 
     // FOR OWNER: transfer to null address
-    function renounceOwnership() public onlyOwner {
+    function renounceOwnership() external onlyOwner {
         owner = payable(address(0));
     }
 
     // FOR OWNER: self-destruct the contract
-    function close() public onlyOwner {
+    function close() external onlyOwner {
         selfdestruct(owner);
     }
 }
