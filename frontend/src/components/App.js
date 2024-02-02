@@ -73,7 +73,7 @@ const App = () => {
       const accounts = await ethereum.request({ method: "eth_accounts" });
       if (accounts.length !== 0) {
         setCurrentAccount(accounts[0]);
-        await loadAllMinds();
+        await loadAllMindsFn();
       }
     } catch (error) {
       console.error(error);
@@ -132,7 +132,7 @@ const App = () => {
     const txn = await getContract().throwNewMind(myMsg.msg);
     await txn.wait();
     alert("Thrown! Now forget about it");
-    await loadAllMinds();
+    await loadAllMindsFn();
   };
 
   const deleteCurrentMindFn = async () => {
@@ -145,7 +145,7 @@ const App = () => {
     );
     await txn.wait();
     alert("Deleted! Now really forget about it");
-    await loadAllMinds();
+    await loadAllMindsFn();
   };
 
   const viewMindFn = async () => {
@@ -164,7 +164,7 @@ const App = () => {
     }
   };
 
-  const loadAllMinds = async () => {
+  const loadAllMindsFn = async () => {
     await handleNetworkCheck();
     try {
       const [allMinds, nonces] = await Promise.all([
