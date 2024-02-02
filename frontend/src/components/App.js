@@ -7,11 +7,11 @@ import contractJSON from "../contracts/TrashOfMind.json";
 
 const App = () => {
   const [currentAccount, setCurrentAccount] = useState("");
-  const [myMind, setMyMind] = useState({ mind: "" });
+  const [myMsg, setMyMsg] = useState({ mind: "" });
   const [myNonce, setMyNonce] = useState({ nonce: "" });
-  const [myThoughts, setMyThoughts] = useState([]);
-  const [recentThoughts, setRecentThoughts] = useState([]);
-  const [numThoughts, setNumThoughts] = useState();
+  const [myMind, setMyMind] = useState([]);
+  const [recentMinds, setRecentMinds] = useState([]);
+  const [numOfMinds, setNumOfMinds] = useState();
   const [allNonces, setAllNonces] = useState([]);
 
   const targetNetworkId = "0x13881";
@@ -73,7 +73,7 @@ const App = () => {
       const accounts = await ethereum.request({ method: "eth_accounts" });
       if (accounts.length !== 0) {
         setCurrentAccount(accounts[0]);
-        await getStatistics();
+        await loadAllMinds();
       }
     } catch (error) {
       console.error(error);
@@ -92,7 +92,6 @@ const App = () => {
         console.error("Error in useEffect:", error);
       }
     };
-
     fetchData();
   }, []);
 
@@ -128,57 +127,60 @@ const App = () => {
     }
   };
 
-  const newThought = async () => {
+  const throwNewMindFn = async () => {
     await handleNetworkCheck();
-    const txn = await getContract().throwNewMind(myMind.mind);
+    const txn = await getContract().throwNewMind(myMsg.msg);
     await txn.wait();
     alert("Thrown! Now forget about it");
-    await getStatistics();
+    await loadAllMinds();
   };
 
-  const deleteThought = async () => {
+  const deleteCurrentMindFn = async () => {
     await handleNetworkCheck();
-    const txn = await getContract().deleteOldMind(parseInt(myNonce.nonce, 10), {
-      gasLimit: 100000,
-    });
+    const txn = await getContract().deleteCurrentMind(
+      parseInt(myNonce.nonce, 10),
+      {
+        gasLimit: 100000,
+      }
+    );
     await txn.wait();
     alert("Deleted! Now really forget about it");
-    await getStatistics();
+    await loadAllMinds();
   };
 
-  const viewThought = async () => {
+  const viewMindFn = async () => {
     try {
-      const minds = await Promise.all([
-        getContract().viewSpecificMind(parseInt(myNonce.nonce, 10)),
+      const mind = await Promise.all([
+        getContract().viewMind(parseInt(myNonce.nonce, 10)),
       ]);
 
-      const mindsCleaned = minds.map((mind) => ({
-        mind: mind.mind,
+      const mindCleaned = mind.map((mind) => ({
+        msg: mind.message,
         timestamp: new Date(mind.timestamp * 1000),
       }));
-      setMyThoughts(mindsCleaned);
+      setMyMind(mindCleaned);
     } catch (error) {
       console.error(error);
     }
   };
 
-  const getStatistics = async () => {
+  const loadAllMinds = async () => {
     await handleNetworkCheck();
     try {
-      const [allThoughts, nonces] = await Promise.all([
-        getContract().viewAllThoughts(),
-        getContract().viewAllNoncesOfAddress(),
+      const [allMinds, nonces] = await Promise.all([
+        getContract().viewAllMinds(),
+        getContract().viewAllNoncesOf(),
       ]);
 
-      const thoughtsCleaned = allThoughts.map((thought) => ({
-        mind: thought.mind,
-        timestamp: new Date(thought.timestamp * 1000),
+      const mindsCleaned = allMinds.map((minds) => ({
+        msg: minds.message,
+        timestamp: new Date(minds.timestamp * 1000),
       }));
 
       const noncesArray = nonces.map((bigNumber) => bigNumber.toNumber());
 
-      setNumThoughts(thoughtsCleaned.length);
-      setRecentThoughts(thoughtsCleaned.slice(-5).reverse());
+      setNumOfMinds(mindsCleaned.length);
+      setRecentMinds(mindsCleaned.slice(-5).reverse());
       setAllNonces(noncesArray);
     } catch (error) {
       console.error(error);
@@ -202,22 +204,22 @@ const App = () => {
             </>
           ) : (
             <p>
-              Hello {truncateEthAddress(currentAccount)}! We have {numThoughts}{" "}
+              Hello {truncateEthAddress(currentAccount)}! We have {numOfMinds}{" "}
               thoughts to-date.
             </p>
           )}
         </div>
         <textarea
-          onChange={(e) => setMyMind({ ...myMind, mind: e.target.value })}
-          value={myMind.mind}
+          onChange={(e) => setMyMsg({ ...myMsg, msg: e.target.value })}
+          value={myMsg.msg}
           name="mind"
           className="textbox"
           placeholder="Write something negative here..."
         ></textarea>
-        <button className="waveButton" onClick={newThought}>
+        <button className="waveButton" onClick={throwNewMindFn}>
           Throw it out...
         </button>
-        {recentThoughts.map((thought, index) => (
+        {recentMinds.map((minds, index) => (
           <div
             key={index}
             style={{
@@ -226,8 +228,8 @@ const App = () => {
               padding: "8px",
             }}
           >
-            <div>Mind: {thought.mind}</div>
-            <div>At: {thought.timestamp.toString()}</div>
+            <div>Message: {minds.msg}</div>
+            <div>At: {minds.timestamp.toString()}</div>
           </div>
         ))}
         <div className="bio">
@@ -250,10 +252,10 @@ const App = () => {
             </option>
           ))}
         </select>
-        <button className="waveButton" onClick={viewThought}>
+        <button className="waveButton" onClick={viewMindFn}>
           View this thought..
         </button>
-        {myThoughts.map((mind, index) => (
+        {myMind.map((mind, index) => (
           <div
             key={index}
             style={{
@@ -262,11 +264,11 @@ const App = () => {
               padding: "8px",
             }}
           >
-            <div>Mind: {mind.mind}</div>
+            <div>Message: {mind.msg}</div>
             <div>At: {mind.timestamp.toString()}</div>
           </div>
         ))}
-        <button className="waveButton" onClick={deleteThought}>
+        <button className="waveButton" onClick={deleteCurrentMindFn}>
           Delete your thought..
         </button>
         <div className="bio">
