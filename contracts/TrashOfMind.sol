@@ -87,18 +87,21 @@ contract TrashOfMind {
     }
 
     // return the nonce of thought from a specific address
-    function viewAllNoncesOf(
-        address _address
-    ) external view returns (uint256[] memory) {
-        uint256[] memory result = new uint256[](totalOwnMinds[_address]);
+    function viewAllNoncesOf() external view returns (uint256[] memory) {
+        uint256[] memory result = new uint256[](totalOwnMinds[msg.sender]);
         uint counter = 0;
         for (uint i = 0; i < allMinds.length; i++) {
-            if (mindOwnerOf[i] == _address) {
+            if (mindOwnerOf[i] == msg.sender) {
                 result[counter] = i;
                 counter++;
             }
         }
         return result;
+    }
+
+    // return all minds
+    function viewAllMinds() external view returns (Mind[] memory) {
+        return allMinds;
     }
 
     // FOR OWNER: transfer to null address
