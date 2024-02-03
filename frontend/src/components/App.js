@@ -12,7 +12,7 @@ const App = () => {
   const [myMind, setMyMind] = useState([]);
   const [recentMinds, setRecentMinds] = useState([]);
   const [numOfMinds, setNumOfMinds] = useState();
-  const [allNonces, setAllNonces] = useState([]);
+  const [allMyNonces, setAllMyNonces] = useState([]);
 
   const targetNetworkId = "0x13881";
   const contractAddress = deployedAddress.address;
@@ -181,7 +181,7 @@ const App = () => {
 
       setNumOfMinds(mindsCleaned.length);
       setRecentMinds(mindsCleaned.slice(-5).reverse());
-      setAllNonces(noncesArray);
+      setAllMyNonces(noncesArray);
     } catch (error) {
       console.error(error);
     }
@@ -246,7 +246,7 @@ const App = () => {
           <option value="" disabled>
             Select a nonce
           </option>
-          {allNonces.map((nonce, index) => (
+          {allMyNonces.map((nonce, index) => (
             <option key={index} value={nonce}>
               {nonce}
             </option>
