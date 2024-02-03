@@ -8,11 +8,11 @@ import contractJSON from "../contracts/TrashOfMind.json";
 const App = () => {
   const [currentAccount, setCurrentAccount] = useState("");
   const [myMsg, setMyMsg] = useState({ mind: "" });
-  const [myNonce, setMyNonce] = useState({ nonce: "" });
-  const [myMind, setMyMind] = useState([]);
+  const [selectedNonce, setselectedNonce] = useState({ nonce: "" });
+  const [selectedMind, setSelectedMind] = useState([]);
   const [recentMinds, setRecentMinds] = useState([]);
   const [numOfMinds, setNumOfMinds] = useState();
-  const [allMyNonces, setAllMyNonces] = useState([]);
+  const [myNonces, setMyNonces] = useState([]);
 
   const targetNetworkId = "0x13881";
   const contractAddress = deployedAddress.address;
@@ -138,7 +138,7 @@ const App = () => {
   const deleteCurrentMindFn = async () => {
     await handleNetworkCheck();
     const txn = await getContract().deleteCurrentMind(
-      parseInt(myNonce.nonce, 10),
+      parseInt(selectedNonce.nonce, 10),
       {
         gasLimit: 100000,
       }
@@ -151,14 +151,14 @@ const App = () => {
   const viewMindFn = async () => {
     try {
       const mind = await Promise.all([
-        getContract().viewMind(parseInt(myNonce.nonce, 10)),
+        getContract().viewMind(parseInt(selectedNonce.nonce, 10)),
       ]);
 
       const mindCleaned = mind.map((mind) => ({
         msg: mind.message,
         timestamp: new Date(mind.timestamp * 1000),
       }));
-      setMyMind(mindCleaned);
+      setSelectedMind(mindCleaned);
     } catch (error) {
       console.error(error);
     }
@@ -169,7 +169,7 @@ const App = () => {
     try {
       const [allMinds, nonces] = await Promise.all([
         getContract().viewAllMinds(),
-        getContract().viewAllNoncesOf(),
+        getContract().viewmyNoncesOf(),
       ]);
 
       const mindsCleaned = allMinds.map((minds) => ({
@@ -181,7 +181,7 @@ const App = () => {
 
       setNumOfMinds(mindsCleaned.length);
       setRecentMinds(mindsCleaned.slice(-5).reverse());
-      setAllMyNonces(noncesArray);
+      setMyNonces(noncesArray);
     } catch (error) {
       console.error(error);
     }
@@ -235,18 +235,20 @@ const App = () => {
         <div className="bio">
           {!currentAccount
             ? ""
-            : `You have ${allMyNonces.length} thoughts to-date`}
+            : `You have ${myNonces.length} thoughts to-date`}
         </div>
         <select
-          onChange={(e) => setMyNonce({ ...myNonce, nonce: e.target.value })}
-          value={myNonce.nonce}
+          onChange={(e) =>
+            setselectedNonce({ ...selectedNonce, nonce: e.target.value })
+          }
+          value={selectedNonce.nonce}
           name="nonce"
           className="textbox"
         >
           <option value="" disabled>
             Select a nonce
           </option>
-          {allMyNonces.map((nonce, index) => (
+          {myNonces.map((nonce, index) => (
             <option key={index} value={nonce}>
               {nonce}
             </option>
@@ -255,7 +257,7 @@ const App = () => {
         <button className="waveButton" onClick={viewMindFn}>
           View this thought..
         </button>
-        {myMind.map((mind, index) => (
+        {selectedMind.map((mind, index) => (
           <div
             key={index}
             style={{
