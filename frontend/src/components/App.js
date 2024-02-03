@@ -235,7 +235,7 @@ const App = () => {
         <div className="bio">
           {!currentAccount
             ? ""
-            : `You have ${allNonces.length} thoughts to-date`}
+            : `You have ${allMyNonces.length} thoughts to-date`}
         </div>
         <select
           onChange={(e) => setMyNonce({ ...myNonce, nonce: e.target.value })}
