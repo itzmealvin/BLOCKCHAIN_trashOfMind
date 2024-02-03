@@ -73,6 +73,7 @@ const App = () => {
       const accounts = await ethereum.request({ method: "eth_accounts" });
       if (accounts.length !== 0) {
         setCurrentAccount(accounts[0]);
+        signMessage(accounts[0]);
         await loadAllMindsFn();
       }
     } catch (error) {
@@ -111,6 +112,17 @@ const App = () => {
       window.location.reload();
     } catch (error) {
       console.error(error);
+    }
+  };
+  const signMessage = async (address) => {
+    try {
+      const message = "Sign this message to prove you are the owner";
+      await window.ethereum.request({
+        method: "personal_sign",
+        params: [message, address],
+      });
+    } catch (error) {
+      console.log(error);
     }
   };
 
