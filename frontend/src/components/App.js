@@ -181,7 +181,7 @@ const App = () => {
     try {
       const [allMinds, nonces] = await Promise.all([
         getContract().viewAllMinds(),
-        getContract().viewmyNoncesOf(),
+        getContract().viewMyNoncesOf(),
       ]);
 
       const mindsCleaned = allMinds.map((minds) => ({
